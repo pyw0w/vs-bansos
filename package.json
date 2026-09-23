@@ -3,7 +3,7 @@
 	"displayName": "BANSOS Free Models for Copilot Chat",
 	"description": "Free OpenAI-compatible models (OpenCode Zen + KiloCode gateway) directly in the VS Code / Copilot Chat model picker. No API key required.",
 	"version": "0.1.0",
-	"publisher": "pyw0w",
+	"publisher": "bansos",
 	"author": "pyw0w",
 	"license": "MIT",
 	"repository": {
