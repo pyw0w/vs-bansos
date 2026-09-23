@@ -1,0 +1,63 @@
+{
+	"name": "vs-bansos",
+	"displayName": "BANSOS Free Models for Copilot Chat",
+	"description": "Free OpenAI-compatible models (OpenCode Zen + KiloCode gateway) directly in the VS Code / Copilot Chat model picker. No API key required.",
+	"version": "0.1.0",
+	"publisher": "pyw0w",
+	"author": "pyw0w",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/pyw0w/vs-bansos"
+	},
+	"engines": {
+		"vscode": "^1.104.0"
+	},
+	"categories": [
+		"AI",
+		"Chat"
+	],
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"contributes": {
+		"languageModelChatProviders": [
+			{
+				"vendor": "bansos",
+				"displayName": "BANSOS Free Models",
+				"managementCommand": "bansos.manage"
+			}
+		],
+		"commands": [
+			{
+				"command": "bansos.manage",
+				"title": "BANSOS: Manage (relay / models)"
+			},
+			{
+				"command": "bansos.refreshModels",
+				"title": "BANSOS: Refresh free model list"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run build",
+		"build": "node esbuild.mjs",
+		"watch": "node esbuild.mjs --watch",
+		"compile": "tsc -p ./ --noEmit",
+		"package": "vsce package --no-dependencies",
+		"install:vsix": "npm run package && code --install-extension \"$(ls vs-bansos-*.vsix | tail -n 1)\""
+	},
+	"devDependencies": {
+		"@types/node": "^22.20.4",
+		"@types/vscode": "^1.104.0",
+		"@vscode/vsce": "^3",
+		"esbuild": "^0.25.0",
+		"typescript": "^5.9.2"
+	},
+	"allowScripts": {
+		"esbuild@0.25.12": true,
+		"@vscode/vsce-sign@2.1.0": true,
+		"keytar@7.9.0": true
+	}
+}
