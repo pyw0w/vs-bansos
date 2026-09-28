@@ -23,6 +23,16 @@ Upstream: https://pi.dev/packages/pi-bansos · npm: `pi-bansos` · repo docs in 
 
 Build: `npm run build` · typecheck: `npm run compile` · package: `npm run package`.
 
+## Commit and release conventions
+
+- Use Conventional Commits: `fix:` = patch, `feat:` = minor, `!` or
+   `BREAKING CHANGE:` = major; docs/ci/chore-only changes do not bump.
+- Release Please manages `package.json`, `package-lock.json`, the manifest,
+   changelog, tag, and GitHub Release. Do not hand-edit the version for routine
+   changes.
+- PR titles are validated; use squash merge with the PR title as the commit
+   subject so Release Please sees the intended bump.
+
 ## Key deltas vs pi-bansos (never port these naively)
 
 - pi-bansos runs a local proxy on `127.0.0.1:18080`; vs-bansos calls upstreams

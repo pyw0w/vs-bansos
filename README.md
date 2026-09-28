@@ -32,23 +32,31 @@ npm run build
 ```bash
 npm install
 npm run package
-code --install-extension vs-bansos-0.1.1.vsix
+code --install-extension ./vs-bansos-*.vsix
 ```
 
 Restart VS Code, then open Chat and pick a model from the dropdown — entries are prefixed with `OpenCode ·` or `KiloCode ·`.
 
-## Build a GitHub release
+## Automatic versioning and releases
 
-After updating the version in `package.json`, push the matching version tag, for example:
+Pull request titles and commit subjects use Conventional Commits:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+feat(provider): add model option
+fix(health): preserve cached catalog on timeout
+feat!: remove an incompatible public behavior
 ```
 
-The tag workflow checks the version, typechecks and packages the extension, then creates a GitHub Release with the `.vsix` attached. It does not need Marketplace credentials.
+- `fix:` and `perf:` produce a patch bump (`0.1.1` → `0.1.2`).
+- `feat:` produces a minor bump (`0.1.1` → `0.2.0`).
+- Add `!` after the type/scope or a `BREAKING CHANGE:` footer for a major bump.
+- `docs:`, `ci:`, `chore:`, `test:`, and `refactor:` alone do not bump the version.
 
-To publish the built extension to the VS Code Marketplace, run `npx vsce publish --no-dependencies` locally from a terminal where you have authenticated as the `bansos` publisher.
+The PR-title check enforces conventional types (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`). Use **Squash and merge**, with GitHub configured to use the PR title as the squash commit title.
+
+Each push to `main` runs Release Please. It opens or updates a release PR with the version, lockfile, manifest, and changelog changes. Merge that PR to create the `vX.Y.Z` GitHub Release; the same workflow then builds and attaches the `.vsix`. No tag push or Marketplace token is required.
+
+To publish to the VS Code Marketplace, run `npx vsce publish --no-dependencies` locally from a terminal authenticated as the `bansos` publisher.
 
 ## Commands
 

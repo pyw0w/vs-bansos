@@ -39,4 +39,7 @@ Language Model Chat Provider API.
   files next to the source.
 - Keep `README.md` (model counts, comparison table) in sync when models or
   behavior change.
+- Use Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`, etc.). Release Please
+  derives version bumps from merged commit subjects; do not manually bump the
+  package version except when intentionally bootstrapping/resetting releases.
 - No new runtime dependencies or proxy layers without asking first.
