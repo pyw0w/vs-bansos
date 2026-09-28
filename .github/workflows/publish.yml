@@ -1,4 +1,4 @@
-name: Build and publish VS Code extension
+name: Build VSIX and create GitHub Release
 
 on:
   push:
@@ -38,11 +38,6 @@ jobs:
 
       - name: Build VSIX
         run: npm run package
-
-      - name: Publish to VS Code Marketplace
-        run: npx vsce publish --no-dependencies -p "$VSCE_PAT"
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Create GitHub Release with VSIX
         env:

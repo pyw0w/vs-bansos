@@ -37,16 +37,18 @@ code --install-extension vs-bansos-0.1.1.vsix
 
 Restart VS Code, then open Chat and pick a model from the dropdown — entries are prefixed with `OpenCode ·` or `KiloCode ·`.
 
-## Publish a release
+## Build a GitHub release
 
-Add a `VSCE_PAT` repository secret in GitHub Actions (Azure DevOps token with Marketplace **Manage** scope). After updating the version in `package.json`, push the matching version tag, for example:
+After updating the version in `package.json`, push the matching version tag, for example:
 
 ```bash
 git tag v0.1.1
 git push origin v0.1.1
 ```
 
-The tag workflow checks the version, typechecks and packages the extension, publishes it to the VS Code Marketplace, then creates a GitHub Release with the `.vsix` attached.
+The tag workflow checks the version, typechecks and packages the extension, then creates a GitHub Release with the `.vsix` attached. It does not need Marketplace credentials.
+
+To publish the built extension to the VS Code Marketplace, run `npx vsce publish --no-dependencies` locally from a terminal where you have authenticated as the `bansos` publisher.
 
 ## Commands
 
