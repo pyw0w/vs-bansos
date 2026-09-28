@@ -1,6 +1,6 @@
 ---
 name: model-catalog-diff
-description: 'Diff the vs-bansos model catalog (src/models.ts) against the upstream pi-bansos model tables (pi.dev / npm). Use when: checking which free models changed, syncing model IDs/limits/flags, or verifying the 27-model list (8 OpenCode Zen + 19 KiloCode gateway).'
+description: 'Diff the vs-bansos model catalog (src/models.ts) against the upstream pi-bansos model tables (pi.dev / npm). Use when: checking which free models changed, syncing model IDs/limits/flags, or verifying the current 26-model list (9 OpenCode Zen + 17 KiloCode gateway).'
 argument-hint: 'Optional: model id or upstream version to focus on'
 ---
 
@@ -35,7 +35,8 @@ produce a porting-ready change list.
    died (not renamed), prefer leaving it in the catalog — `src/health.ts`
    skips dead models at startup anyway.
 6. **Sync docs**: update the model counts and tables in `README.md`
-   (e.g. "27 models: 8 OpenCode + 19 KiloCode").
+   (currently "26 models: 9 OpenCode + 17 KiloCode"). Preserve pinned
+   `openrouter/free`, even if it is missing from the Kilo `/models` catalog.
 
 ## Output Format
 

@@ -89,6 +89,15 @@ export const OPENCODE_MODELS: ModelDef[] = [
 		maxTokens: 32_000,
 		source: "opencode",
 	},
+	{
+		id: "space-bunny-free",
+		name: "Space Bunny",
+		reasoning: true,
+		contextWindow: 1_000_000,
+		maxTokens: 524_288,
+		input: ["text", "image"],
+		source: "opencode",
+	},
 ];
 
 // KiloCode gateway free models (keyless — 200 req/hr per IP).
@@ -231,16 +240,6 @@ export const KILO_MODELS: ModelDef[] = [
 		source: "kilo",
 	},
 	{
-		id: "minimax/minimax-m3:free",
-		name: "MiniMax M3 Free",
-		reasoning: true,
-		contextWindow: 1_048_576,
-		maxTokens: 943_718,
-		input: ["text", "image"],
-		thinkingFormat: "openrouter",
-		source: "kilo",
-	},
-	{
 		id: "thinkingmachines/inkling-small:free",
 		name: "Inkling Small Free",
 		reasoning: true,
@@ -251,21 +250,12 @@ export const KILO_MODELS: ModelDef[] = [
 		source: "kilo",
 	},
 	{
-		id: "thinkingmachines/inkling:free",
-		name: "Inkling Free",
+		id: "qwen/qwen3.8-27b:free",
+		name: "Qwen3.8 27B Free",
 		reasoning: true,
-		contextWindow: 1_048_576,
-		maxTokens: 262_144,
+		contextWindow: 262_144,
+		maxTokens: 235_929,
 		input: ["text", "image"],
-		thinkingFormat: "openrouter",
-		source: "kilo",
-	},
-	{
-		id: "minimax/minimax-m2.7:free",
-		name: "MiniMax M2.7 Free",
-		reasoning: true,
-		contextWindow: 196_608,
-		maxTokens: 176_947,
 		thinkingFormat: "openrouter",
 		source: "kilo",
 	},

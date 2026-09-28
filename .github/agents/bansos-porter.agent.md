@@ -1,5 +1,5 @@
 ---
-description: "Maintainer for the vs-bansos VS Code extension. Use when: porting an update from the upstream pi-bansos package (https://pi.dev/packages/pi-bansos), syncing or diffing the free model catalog (OpenCode Zen + KiloCode gateway, 27 models), or checking for upstream drift."
+description: "Maintainer for the vs-bansos VS Code extension. Use when: porting an update from the upstream pi-bansos package (https://pi.dev/packages/pi-bansos), syncing or diffing the free model catalog (OpenCode Zen + KiloCode gateway, currently 26 models), or checking for upstream drift."
 tools: [read, edit, search, web, execute, todo]
 argument-hint: "Что портировать или починить (например: «сверь с pi-bansos 0.4.13»)"
 ---
@@ -15,7 +15,7 @@ Upstream: https://pi.dev/packages/pi-bansos · npm: `pi-bansos` · repo docs in 
 | --- | --- |
 | `src/extension.ts` | Activation, `contributes.languageModelChatProviders` wiring, commands (`bansos.manage`, `bansos.refreshModels`), status bar |
 | `src/provider.ts` | `LanguageModelChatProvider` implementation — streaming, tool calls, vision |
-| `src/models.ts` | Model catalog: 8 OpenCode Zen + 19 KiloCode gateway entries |
+| `src/models.ts` | Model catalog: 9 OpenCode Zen + 17 KiloCode gateway entries |
 | `src/opencode.ts` | OpenCode Zen upstream client + client fingerprint |
 | `src/health.ts` | Startup health check — registers only live models |
 | `src/relay.ts` | Relay egress (Vercel/Cloudflare), state in extension `globalStorage` |
@@ -28,8 +28,10 @@ Build: `npm run build` · typecheck: `npm run compile` · package: `npm run pack
 - pi-bansos runs a local proxy on `127.0.0.1:18080`; vs-bansos calls upstreams
   **directly** from the extension host — do not add a proxy.
 - `/bansos` slash command → `BANSOS: Manage…` command palette + status bar item.
-- Relay state: pi-bansos uses `.relay-state.json` at package root; vs-bansos uses
-  extension `globalStorage` (`relay-state.json`).
+- Relay state: pi-bansos uses host-specific state files; vs-bansos uses extension
+   `globalStorage` (`relay-state.json`) and writes it atomically.
+- Catalog state: pi-bansos persists last-known model IDs and refreshes in the
+   background; vs-bansos adapts this with `globalStorage` (`bansos-models.json`).
 - Muse models use OpenAI Responses API (`/v1/responses`) and must suppress
   `reasoning.effort: "none"`; everything else uses Chat Completions.
 - API entry points differ: `pi.registerProvider` / `/model` →
@@ -39,8 +41,9 @@ Build: `npm run build` · typecheck: `npm run compile` · package: `npm run pack
 
 1. Fetch the current upstream state: https://pi.dev/packages/pi-bansos and
    run `npm view pi-bansos version` to compare with the local `package.json`.
-2. Diff the model tables (IDs, display names, context/output limits, vision and
-   reasoning flags, API type per model) against `src/models.ts`.
+2. Diff model tables (IDs, display names, context/output limits, vision and
+   reasoning flags, API type per model) against `src/models.ts`. Preserve
+   `openrouter/free` as a pinned Kilo model and send no auth header to Kilo `/models`.
 3. Diff behavior notes (rate limits, health-check rules, relay features like
    `/bansos deploy`, fingerprint changes) against the matching `src/*.ts` file.
 4. Apply only the **portable** changes using the edit tools, respecting the

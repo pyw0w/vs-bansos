@@ -341,9 +341,10 @@ export class BansosChatModelProvider
 	private readonly _onDidChange = new vscode.EventEmitter<void>();
 	readonly onDidChangeLanguageModelChatInformation = this._onDidChange.event;
 
-	async refresh(): Promise<void> {
-		await runHealthCheck(true);
+	async refresh(): Promise<RegisteredModel[]> {
+		const models = await runHealthCheck(true);
 		this._onDidChange.fire();
+		return models;
 	}
 
 	provideLanguageModelChatInformation(

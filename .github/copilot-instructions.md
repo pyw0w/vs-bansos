@@ -17,7 +17,7 @@ Language Model Chat Provider API.
 | --- | --- |
 | `src/extension.ts` | Activation, provider registration, commands, status bar |
 | `src/provider.ts` | `LanguageModelChatProvider` — streaming (SSE), tool calls, vision |
-| `src/models.ts` | Model catalog (8 OpenCode + 19 KiloCode) |
+| `src/models.ts` | Model catalog (9 OpenCode + 17 KiloCode; 26 total) |
 | `src/opencode.ts` | OpenCode Zen client + client fingerprint |
 | `src/health.ts` | Startup health check + rate guards |
 | `src/relay.ts` | Relay egress (Vercel/Cloudflare), state in `globalStorage` |
@@ -30,8 +30,11 @@ Language Model Chat Provider API.
 - Muse models use the OpenAI Responses API (`/v1/responses`) and must suppress
   `reasoning.effort: "none"`; all other models use Chat Completions.
 - Rate guards: KiloCode 200 req/h/IP (rolling hour), OpenCode UTC-day guard.
-- Health check registers only live models; dead models stay in `models.ts` and
-  are skipped silently — do not delete catalog entries just because they failed.
+- Health check uses a catalog cache in extension `globalStorage` and refreshes
+  upstream in the background; preserve each source's last-known catalog on a
+  temporary failure. Keep `openrouter/free` pinned even if absent from `/models`.
+- Dead models stay in `models.ts` and are skipped silently — do not delete
+  catalog entries just because they failed.
 - Relay state lives in extension `globalStorage` (`relay-state.json`), not in
   files next to the source.
 - Keep `README.md` (model counts, comparison table) in sync when models or

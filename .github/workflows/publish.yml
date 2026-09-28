@@ -1,11 +1,12 @@
-name: Publish to VS Code Marketplace
+name: Build and publish VS Code extension
 
-# Публикация при создании GitHub Release (тег vX.Y.Z)
-# или вручную через workflow_dispatch.
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   publish:
@@ -15,7 +16,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -24,27 +25,27 @@ jobs:
       - name: Typecheck
         run: npm run compile
 
-      - name: Check version matches tag
-        if: github.event_name == 'release'
+      - name: Verify tag matches package version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          TAG="${{ github.event.release.tag_name }}"
-          if [ "$PKG_VERSION" != "$TAG" ]; then
-            echo "Version mismatch: package.json=$PKG_VERSION, release tag=$TAG"
+          TAG_VERSION="${RELEASE_TAG#v}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Tag version $TAG_VERSION does not match package.json version $PACKAGE_VERSION"
             exit 1
           fi
 
-      - name: Publish extension
+      - name: Build VSIX
+        run: npm run package
+
+      - name: Publish to VS Code Marketplace
         run: npx vsce publish --no-dependencies -p "$VSCE_PAT"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
-      - name: Package .vsix (artifact)
-        run: npm run package
-
-      - name: Upload .vsix to release
-        if: github.event_name == 'release'
+      - name: Create GitHub Release with VSIX
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ github.event.release.tag_name }}" *.vsix --clobber
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" ./*.vsix --title "BANSOS $RELEASE_TAG" --generate-notes

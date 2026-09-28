@@ -1,7 +1,7 @@
 // vs-bansos — free models for the VS Code / Copilot Chat model picker.
 import * as vscode from "vscode";
 import { BansosChatModelProvider, resetRateLimits } from "./provider";
-import { runHealthCheck } from "./health";
+import { initCatalogCache } from "./health";
 import {
 	initRelayState,
 	relayState,
@@ -16,6 +16,7 @@ const VENDOR = "bansos";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	initRelayState(context.globalStorageUri.fsPath);
+	initCatalogCache(context.globalStorageUri.fsPath);
 
 	const provider = new BansosChatModelProvider();
 	context.subscriptions.push(
@@ -29,17 +30,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	);
 	status.command = "bansos.manage";
 	const updateStatus = () => {
+		if (!relayState.statusBarVisible) {
+			status.hide();
+			return;
+		}
 		status.text = relayState.enabled
 			? "$(sparkle) bansos: relay ON"
 			: "$(sparkle) bansos: free models";
 		status.tooltip = showRelayStatus();
 		status.show();
 	};
+	const persistRelayChange = (): boolean => {
+		if (saveRelayState()) return true;
+		updateStatus();
+		vscode.window.showErrorMessage(
+			"BANSOS: could not save relay settings; the change was reverted.",
+		);
+		return false;
+	};
 	updateStatus();
 	context.subscriptions.push(status);
 
 	// Kick off the health check so the picker is populated ASAP.
-	runHealthCheck()
+	provider.refresh()
 		.then((models) => {
 			updateStatus();
 			if (models.length) {
@@ -103,6 +116,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 					label: "$(refresh) Refresh free model list",
 					action: "refresh",
 				},
+				{
+					label: relayState.statusBarVisible
+						? "$(eye-closed) Hide status bar item"
+						: "$(eye) Show status bar item",
+					action: "toggleStatusBar",
+				},
 			];
 			const pick = await vscode.window.showQuickPick(items, {
 					title: "BANSOS",
@@ -118,14 +137,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 						return;
 					}
 					setRelay(true, relayState.url);
-					saveRelayState();
+					if (!persistRelayChange()) return;
 					updateStatus();
 					vscode.window.showInformationMessage(showRelayStatus());
 					break;
 				}
 				case "off": {
 					setRelay(false, relayState.url);
-					saveRelayState();
+					if (!persistRelayChange()) return;
 					updateStatus();
 					vscode.window.showInformationMessage(showRelayStatus());
 					break;
@@ -151,7 +170,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 					});
 					if (!rp) return;
 					setRelay(true, rp.url);
-					saveRelayState();
+					if (!persistRelayChange()) return;
 					updateStatus();
 					vscode.window.showInformationMessage(showRelayStatus());
 					break;
@@ -163,7 +182,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 					});
 					if (url === undefined) return;
 					setRelay(relayState.enabled, url, "manual");
-					saveRelayState();
+					if (!persistRelayChange()) return;
 					updateStatus();
 					vscode.window.showInformationMessage(showRelayStatus());
 					break;
@@ -188,7 +207,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 					);
 					if (!rp) return;
 					removeRelay(rp.url);
-					saveRelayState();
+					if (!persistRelayChange()) return;
 					vscode.window.showInformationMessage(`BANSOS: removed ${rp.url}`);
 					break;
 				}
@@ -212,7 +231,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 							() => deployVercelRelay(token, name),
 						);
 						setRelay(true, url, `deployed ${name}`);
-						saveRelayState();
+						if (!persistRelayChange()) {
+							vscode.window.showWarningMessage(
+								`BANSOS: relay deployed at ${url}, but settings were not saved. Set this URL manually to use it.`,
+							);
+							return;
+						}
 						updateStatus();
 						vscode.window.showInformationMessage(
 							`BANSOS: deployed & active — ${url}`,
@@ -227,6 +251,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				case "refresh": {
 					await provider.refresh();
 					vscode.window.showInformationMessage("BANSOS: model list refreshed");
+					break;
+				}
+				case "toggleStatusBar": {
+					relayState.statusBarVisible = !relayState.statusBarVisible;
+					if (!persistRelayChange()) return;
+					updateStatus();
+					vscode.window.showInformationMessage(
+						`BANSOS status bar item ${relayState.statusBarVisible ? "shown" : "hidden"}`,
+					);
 					break;
 				}
 			}

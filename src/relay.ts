@@ -3,15 +3,22 @@
 // deploy is used in-memory only and never persisted.
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { randomBytes } from "node:crypto";
 
 export type KnownRelay = { url: string; label?: string; addedAt?: string };
 export type RelayState = {
 	enabled: boolean;
 	url: string;
 	relays: KnownRelay[];
+	statusBarVisible: boolean;
 	/** rolling counters for status display */
 	hits: number;
 };
+
+type PersistedRelayState = Pick<
+	RelayState,
+	"enabled" | "url" | "relays" | "statusBarVisible"
+>;
 
 const VERCEL_API = "https://api.vercel.com";
 
@@ -34,12 +41,106 @@ export default async function handler(req) {
 }`;
 
 let stateFile = "";
+let lastSavedState: PersistedRelayState = {
+	enabled: false,
+	url: "",
+	relays: [],
+	statusBarVisible: true,
+};
 export const relayState: RelayState = {
 	enabled: false,
 	url: "",
 	relays: [],
+	statusBarVisible: true,
 	hits: 0,
 };
+
+function persistedState(): PersistedRelayState {
+	return {
+		enabled: relayState.enabled,
+		url: relayState.url,
+		relays: relayState.relays.map((relay) => ({ ...relay })),
+		statusBarVisible: relayState.statusBarVisible,
+	};
+}
+
+function readPersistedState(): PersistedRelayState {
+	try {
+		const s = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+		return {
+			enabled: Boolean(s?.enabled),
+			url: typeof s?.url === "string" ? s.url.trim() : "",
+			relays: Array.isArray(s?.relays)
+				? s.relays.filter(
+						(relay: unknown): relay is KnownRelay =>
+							Boolean(
+								relay &&
+								typeof relay === "object" &&
+								typeof (relay as KnownRelay).url === "string",
+							),
+					)
+				: [],
+			statusBarVisible: s?.statusBarVisible !== false,
+		};
+	} catch {
+		return {
+			...lastSavedState,
+			relays: lastSavedState.relays.map((relay) => ({ ...relay })),
+		};
+	}
+}
+
+function mergeRelayList(
+	base: KnownRelay[],
+	local: KnownRelay[],
+	latest: KnownRelay[],
+): KnownRelay[] {
+	const result = latest.map((relay) => ({ ...relay }));
+	const baseByUrl = new Map(base.map((relay) => [relay.url, relay]));
+	const localByUrl = new Map(local.map((relay) => [relay.url, relay]));
+
+	for (const [url, previous] of baseByUrl) {
+		const changed = localByUrl.get(url);
+		if (!changed) {
+			const index = result.findIndex((relay) => relay.url === url);
+			if (index >= 0) result.splice(index, 1);
+		} else if (JSON.stringify(changed) !== JSON.stringify(previous)) {
+			const index = result.findIndex((relay) => relay.url === url);
+			if (index >= 0) result[index] = { ...changed };
+			else result.push({ ...changed });
+		}
+	}
+
+	for (const relay of local) {
+		if (!baseByUrl.has(relay.url) && !result.some((item) => item.url === relay.url)) {
+			result.push({ ...relay });
+		}
+	}
+	return result;
+}
+
+function mergePersistedState(
+	base: PersistedRelayState,
+	local: PersistedRelayState,
+	latest: PersistedRelayState,
+): PersistedRelayState {
+	return {
+		enabled: local.enabled === base.enabled ? latest.enabled : local.enabled,
+		url: local.url === base.url ? latest.url : local.url,
+		statusBarVisible:
+			local.statusBarVisible === base.statusBarVisible
+				? latest.statusBarVisible
+				: local.statusBarVisible,
+		relays: mergeRelayList(base.relays, local.relays, latest.relays),
+	};
+}
+
+function restoreLastSavedState(): void {
+	relayState.enabled = lastSavedState.enabled;
+	relayState.url = lastSavedState.url;
+	relayState.relays = lastSavedState.relays.map((relay) => ({ ...relay }));
+	relayState.statusBarVisible = lastSavedState.statusBarVisible;
+}
 
 export function initRelayState(storageDir: string): void {
 	stateFile = path.join(storageDir, "relay-state.json");
@@ -48,25 +149,41 @@ export function initRelayState(storageDir: string): void {
 		relayState.enabled = Boolean(s?.enabled);
 		relayState.url = typeof s?.url === "string" ? s.url.trim() : "";
 		relayState.relays = Array.isArray(s?.relays) ? s.relays : [];
+		relayState.statusBarVisible = s?.statusBarVisible !== false;
 	} catch {
 		/* first run */
 	}
+	lastSavedState = persistedState();
 }
 
-export function saveRelayState(): void {
-	if (!stateFile) return;
+export function saveRelayState(): boolean {
+	if (!stateFile) return false;
+	const desiredState = persistedState();
+	const nextState = mergePersistedState(
+		lastSavedState,
+		desiredState,
+		readPersistedState(),
+	);
+	const tempFile = `${stateFile}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
 	try {
 		fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-		fs.writeFileSync(
-			stateFile,
-			JSON.stringify({
-				enabled: relayState.enabled,
-				url: relayState.url,
-				relays: relayState.relays,
-			}),
-		);
+		fs.writeFileSync(tempFile, JSON.stringify(nextState), { mode: 0o600 });
+		fs.renameSync(tempFile, stateFile);
+		relayState.enabled = nextState.enabled;
+		relayState.url = nextState.url;
+		relayState.relays = nextState.relays.map((relay) => ({ ...relay }));
+		relayState.statusBarVisible = nextState.statusBarVisible;
+		lastSavedState = nextState;
+		return true;
 	} catch (e) {
+		try {
+			fs.rmSync(tempFile, { force: true });
+		} catch {
+			// Preserve the original persistence error.
+		}
+		restoreLastSavedState();
 		console.error("[bansos] could not persist relay state", e);
+		return false;
 	}
 }
 
